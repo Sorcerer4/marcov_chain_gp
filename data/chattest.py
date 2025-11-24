@@ -145,6 +145,7 @@ def plot_results(matrices, signals, results, tickers):
 
 # -------------------------
 # MAIN
+#Hej
 # -------------------------
 def main():
     tickers = ["NVDA","MSFT","AAPL","GOOGL","AMZN","META","AVGO","TSLA","BRK-B","GOOG"]
