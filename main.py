@@ -2,31 +2,42 @@ import yfinance as yf
 import os
 import pandas as pd
 import numpy as np
+import random
 from numpy.linalg import matrix_power
+import matplotlib.pyplot as plt
 
-def getData(tickers,start,end):
-    os.makedirs("data", exist_ok=True)
+
+from Backtester import backtest
+
+def getData(tickers,start,end, folder):
+    os.makedirs(folder, exist_ok=True)
     for ticker in tickers:
         df = yf.download(ticker, start=start, end=end, auto_adjust=False)[["Open", "Close"]]
         df["DailyChange"] = (df["Close"] - df["Open"]) / df["Open"]
-        df.to_csv(f"data/{ticker}.csv")
+        df.to_csv(f"{folder}/{ticker}.csv")
 
-def readData(tickers):
-    d = dict()
+def readData(tickers,folder):
+    #Reads changes and closeprices for each stock and return 2 respective dictionairies
+
+    changes = dict()
+    prices = dict()
     for ticker in tickers:
-        df = pd.read_csv(f"data/{ticker}.csv")
-        dailyChanges = df["DailyChange"].to_numpy()[2:]
-        d   [ticker] = dailyChanges
-    return d
+        df = pd.read_csv(f"{folder}/{ticker}.csv")
 
-def countDiscreteChange(dailyChanges):
-    bins = np.arange(-0.1, 0.105, 0.005)
-    bins = np.insert(bins, 0, -np.inf)
-    bins = np.append(bins, np.inf)
+        #Convert to numerical values
 
-    for changes in dailyChanges.values():
-        counts,edges = np.histogram(changes,bins)
-        print("Counts per interval:", counts)
+        df["DailyChange"] = pd.to_numeric(df["DailyChange"],errors= "coerce")
+        df["Close"] = pd.to_numeric(df["Close"],errors= "coerce")
+
+
+
+        dailyChanges = df["DailyChange"].to_numpy()[3:]
+        dailyPrices = df["Close"].to_numpy()[3:]
+
+
+        changes[ticker] = dailyChanges
+        prices[ticker] = dailyPrices
+    return changes,prices
 
 def mak_tr_matrix(dailyChanges):
 
@@ -59,31 +70,42 @@ def mak_tr_matrix(dailyChanges):
         for i in range(12):
             print((matrix_power(M,i)))
 
-def backtest(test_data, signals, capital, fee, allow_short = False):
+def marcovTrade(position, historical_prices, day, cash):
+    #--------RANDOMTRADE STRATEGY PLACEHOLDER--------
 
-    sig = np.array(signals)
-    stockprices = np.array(test_data)
+    randomNumb = random.randint(-5,5)
+    target_position = position + randomNumb
 
-    #Elementvis multikplikation
-    ret = stockprices * sig
-    result = np.cumsum(ret)
-
-
-    return
+    return target_position
 
 
 def main():
     #S&P500 TOP 10
+
     tickers = ["NVDA","MSFT","AAPL","GOOGL","AMZN","META","AVGO","TSLA","BRK-B","GOOG"]
+    start = "2014-01-01"
+    end = "2019-01-01"
 
-    start = "2023-01-01"
-    end = "2024-01-01"
+    getData(tickers,start,end, folder="testData")
+    changes_dict , prices_dict = readData(tickers, folder="testData")
 
-    getData(tickers,start,end)
-    dailychanges = readData(tickers)
-    mak_tr_matrix(dailychanges)
-    #countDiscreteChange(dailychanges)
+    #Setup plott
+    plt.figure(figsize=(10, 6))
 
+    for stock, prices in prices_dict.items():
+        #mak_tr_matrix(daily_changes)
+        results = backtest(prices,marcovTrade,0.005,10000,False)
+
+
+
+        plt.plot(results, label=stock)
+
+    #Plotting
+    plt.legend()
+    plt.title("Results Strategy)")
+    plt.xlabel("Days")
+    plt.ylabel("Return")
+    plt.show()
 
 
 if __name__ == "__main__":
