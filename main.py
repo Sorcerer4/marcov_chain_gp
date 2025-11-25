@@ -16,7 +16,7 @@ def readData(tickers):
     for ticker in tickers:
         df = pd.read_csv(f"data/{ticker}.csv")
         dailyChanges = df["DailyChange"].to_numpy()[2:]
-        d[ticker] = dailyChanges
+        d   [ticker] = dailyChanges
     return d
 
 def countDiscreteChange(dailyChanges):
@@ -59,7 +59,17 @@ def mak_tr_matrix(dailyChanges):
         for i in range(12):
             print((matrix_power(M,i)))
 
+def backtest(test_data, signals, capital, fee, allow_short = False):
 
+    sig = np.array(signals)
+    stockprices = np.array(test_data)
+
+    #Elementvis multikplikation
+    ret = stockprices * sig
+    result = np.cumsum(ret)
+
+
+    return
 
 
 def main():
