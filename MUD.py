@@ -107,7 +107,6 @@ def signalMUD(MUD, changes):
 
         for j in range (4,8):
             down += output[j,0]
-        print(up, down)
         if up > 0.50:
             signals.append(1)
         elif down > 0.55:
@@ -125,9 +124,6 @@ def backtest(signals, changes):
     dailyequity = [10000, 10000, 10000, 10000]
 
     for i in range(0, len(changes)-5):
-        print(f"lenght of changes{len(changes)}")
-        print(f"lenght of signals{len(signals)}")
-        print(i)
         x = i + 1
         if signals[i] == 1:
             cash *= (1+changes[x])
@@ -143,9 +139,6 @@ def backtest(signals, changes):
         else:
             dailyequity.append(cash)
 
-
-
-    print(f"equity {len(dailyequity)}")
     return dailyequity
 
 def main():
