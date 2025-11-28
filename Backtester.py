@@ -38,6 +38,7 @@ def backtest (ticker, prices, marcovTrade, fee, cash, allow_shorting, matrix):
                 # Update cost after change
                # cost = trade_amount * current_price
                 #cost += abs(cost) * fee
+            #hej
 
             # Do the trade
             cash -= cost

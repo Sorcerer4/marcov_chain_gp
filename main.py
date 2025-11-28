@@ -104,6 +104,7 @@ def marcovTrade(ticker, position, historical_prices, day, cash, matrix):
 
     return target_position
 
+    #hej
 
 def main():
     #S&P500 TOP 10
