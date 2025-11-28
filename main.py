@@ -100,34 +100,34 @@ def marcovTrade(ticker, position, historical_prices, day, cash, matrix):
     else:
         target_position = position + 10
 
-
-
     return target_position
-
-    #hej
 
 def main():
     #S&P500 TOP 10
 
-    tickers = ["NVDA","GOOG"]
-    start = "2014-01-01"
-    end = "2019-01-01"
+    tickers = ["NVDA","MSFT","AAPL","GOOGL","AMZN","META","AVGO","TSLA","BRK-B","GOOG"]
+    train_start = "2014-01-01"
+    train_end = "2019-01-01"
 
-    getData(tickers,start,end, folder="testData")
-    changes_dict , prices_dict = readData(tickers, folder="testData")
+    test_start = "2020-01-01"
+    test_end = "2023-01-01"
 
-    dictMatrices = mak_tr_matrix(changes_dict)
+    getData(tickers,train_start,train_end, folder="trainData")
+    getData(tickers, test_start, test_end, folder="testData")
+
+    #ALL FOLLOWING DICTIONAIRES
+
+    train_changes , train_prices = readData(tickers, folder="trainData")
+    test_changes , test_prices = readData(tickers, folder="testData")
+
+    dictMatrices = mak_tr_matrix(train_changes)
 
     #Setup plot
     plt.figure(figsize=(10, 6))
 
-    for ticker, prices in prices_dict.items():
-        #mak_tr_matrix(daily_changes)
-        print(ticker, prices)
+    for ticker, prices in test_prices.items():
 
-        results = backtest(ticker, prices,marcovTrade,0.005,10000,False, dictMatrices[ticker])
-
-
+        results = backtest(ticker, prices,dictMatrices[ticker], marcovTrade,0.005,0,False)
 
         plt.plot(results, label=ticker)
 

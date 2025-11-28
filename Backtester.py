@@ -1,4 +1,4 @@
-def backtest (ticker, prices, marcovTrade, fee, cash, allow_shorting, matrix):
+def backtest (ticker, prices,matrix, marcovTrade, fee, cash, allow_shorting):
 
     #NOTICE prices is np.array, not array, dict or pd-dataframe
 
@@ -8,7 +8,6 @@ def backtest (ticker, prices, marcovTrade, fee, cash, allow_shorting, matrix):
 
     for day in range(len(prices)):
         current_price = prices[day]
-
 
         # ----- Determination of trade ------
 
