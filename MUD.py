@@ -80,31 +80,6 @@ def mak_tr_matrix(dailyChanges):
                 MUD[j, i] /= jsum 
         return MUD
 
-
-def marcovTrade(ticker, position, historical_prices, day, cash, matrix):
-
-    target_position = 0
-
-    changeToday = (historical_prices[day]-historical_prices[day-1])/historical_prices[day-1]
-
-    vector = [[0],[0]]
-
-    if changeToday < 0:
-        vector[0].append(0)
-        vector[1].append(1)
-    else:
-        vector[0].append(1)
-        vector[1].append(0)
-
-    probVector = np.matmul(matrix, vector)
-
-    if probVector[0][0] > 0.5:
-        target_position = position - 10
-    else:
-        target_position = position + 10
-
-    return target_position
-
 def signalMUD(MUD, changes):
     changeUD = []
     signals = [0, 0, 0, 0]
