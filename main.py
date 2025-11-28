@@ -2,83 +2,98 @@ import yfinance as yf
 import os
 import pandas as pd
 import numpy as np
-import random
-from numpy.linalg import matrix_power
-import matplotlib.pyplot as plt
-
 
 from Backtester import backtest
 
-def getData(tickers,start,end, folder):
-    os.makedirs(folder, exist_ok=True)
-    for ticker in tickers:
-        df = yf.download(ticker, start=start, end=end, auto_adjust=False)[["Open", "Close"]]
+class stock:
+    def __init__(self,ticker,training_start, training_end, strategy_fn, trainingperiod = 12, testperiod = 6):
+        self.ticker = ticker
+        self.start = training_start
+        self.end = training_end
+        self.trainingperiod = trainingperiod
+        self.testperiod = testperiod
+        self.strategyfunction = strategy_fn
+
+        self.performance_log = self.doCrossValidation(0,0.005,False)
+        self.avgPerformance = np.mean(self.performance_log)
+        self.volPerformance = np.std(self.performance_log)
+
+    def doCrossValidation(self, cash, fee,allow_shorting):
+        starting_Dates = pd.date_range(start=self.start, end=self.end, freq='MS').date  # MS = Month Start
+
+        performance_log = []
+        for start in starting_Dates:
+            end = start + pd.DateOffset(months=self.trainingperiod)
+            testing_start = end + pd.DateOffset(months=1)
+            testing_end = testing_start + pd.DateOffset(months=self.testperiod)
+
+            start = start.strftime('%Y-%m-%d')
+            end = end.strftime('%Y-%m-%d')
+            testing_start = testing_start.strftime('%Y-%m-%d')
+            testing_end = testing_end.strftime('%Y-%m-%d')
+
+            self.getData(self.ticker, start, end, folder="trainData")
+            self.getData(self.ticker, testing_start, testing_end, folder="testData")
+
+            train_changes, train_prices = self.readData(self.ticker, folder="trainData")
+            test_changes, test_prices = self.readData(self.ticker, folder="testData")
+
+            marcovMatrix = self.mk_tr_matrix(train_changes)
+
+            result = backtest(self.ticker, test_prices, marcovMatrix, self.strategyfunction, fee, cash, allow_shorting)
+            profit = (result[-1] - result[0]) / result[0]
+            performance_log.append(profit)
+
+        return performance_log
+
+
+    def mk_tr_matrix(self,changes):
+
+        m, n = 2, 2
+        count_bull = count_bear = 0
+
+        M = np.zeros((m, n))
+
+        for i in range(len(changes) - 1):
+            if changes[i] < 0 and changes[i + 1] < 0:
+                M[0, 0] += 1
+                count_bear += 1
+            elif changes[i] < 0 and changes[i + 1] > 0:
+                M[1, 0] += 1
+                count_bear += 1
+            elif changes[i] > 0 and changes[i + 1] < 0:
+                M[0, 1] += 1
+                count_bull += 1
+            elif changes[i] > 0 and changes[i + 1] > 0:
+                M[1, 1] += 1
+                count_bull += 1
+        M[0, 0], M[1, 0] = M[0, 0] / count_bear, M[1, 0] / count_bear
+        M[0, 1], M[1, 1] = M[0, 1] / count_bull, M[1, 1] / count_bull
+
+        return M
+
+    def getData(self, name, start, end, folder):
+        os.makedirs(folder, exist_ok=True)
+        df = yf.download(name, start=start, end=end, auto_adjust=True)[["Open", "Close"]]
         df["DailyChange"] = (df["Close"] - df["Open"]) / df["Open"]
-        df.to_csv(f"{folder}/{ticker}.csv")
+        df.to_csv(f"{folder}/{name}.csv")
 
-def readData(tickers,folder):
-    #Reads changes and closeprices for each stock and return 2 respective dictionairies
+    def readData(self,name, folder):
+        # Reads changes and closeprices for each stock and return 2 respective dictionairies
 
-    changes = dict()
-    prices = dict()
-    for ticker in tickers:
-        df = pd.read_csv(f"{folder}/{ticker}.csv")
+        df = pd.read_csv(f"{folder}/{name}.csv")
 
-        #Convert to numerical values
+        # Convert to numerical values
 
-        df["DailyChange"] = pd.to_numeric(df["DailyChange"],errors= "coerce")
-        df["Close"] = pd.to_numeric(df["Close"],errors= "coerce")
-
-
+        df["DailyChange"] = pd.to_numeric(df["DailyChange"], errors="coerce")
+        df["Close"] = pd.to_numeric(df["Close"], errors="coerce")
 
         dailyChanges = df["DailyChange"].to_numpy()[3:]
         dailyPrices = df["Close"].to_numpy()[3:]
 
-
-        changes[ticker] = dailyChanges
-        prices[ticker] = dailyPrices
-    return changes,prices
-
-def mak_tr_matrix(dailyChanges):
-
-    dictMatrices = dict()
-    m,n = 2,2
-
-    for ticker,changes in dailyChanges.items():
-        M = np.zeros((m,n))
-        count_bull = count_bear = 0
-
-        print(ticker)
-
-        for i in range(len(changes)-1):
-            if changes[i] < 0 and changes[i+1] < 0:
-                M[0,0] += 1
-                count_bear +=1
-            elif changes[i] < 0 and changes[i+1] > 0:
-                M[1,0] += 1
-                count_bear += 1
-            elif changes[i] > 0 and changes[i+1] < 0:
-                M[0,1] += 1
-                count_bull += 1
-            elif changes[i] > 0 and changes[i+1] > 0:
-                M[1,1] += 1
-                count_bull += 1
-
-
-        M[0,0], M[1,0] = M[0,0]/count_bear, M[1,0]/count_bear
-        M[0, 1], M[1, 1] = M[0, 1] / count_bull, M[1, 1] / count_bull
-
-        dictMatrices[ticker] = M
-
-        for i in range(12):
-            print((matrix_power(M,i)))
-
-    return dictMatrices
+        return dailyChanges, dailyPrices
 
 def marcovTrade(ticker, position, historical_prices, day, cash, matrix):
-    #--------RANDOMTRADE STRATEGY PLACEHOLDER--------
-
-    ##randomNumb = random.randint(-5,5)
 
     target_position = 0
 
@@ -102,42 +117,23 @@ def marcovTrade(ticker, position, historical_prices, day, cash, matrix):
 
     return target_position
 
+
 def main():
-    #S&P500 TOP 10
 
-    tickers = ["NVDA","MSFT","AAPL","GOOGL","AMZN","META","AVGO","TSLA","BRK-B","GOOG"]
-    train_start = "2014-01-01"
-    train_end = "2019-01-01"
+    ticker = ["NVDA", "MSFT", "AAPL", "GOOGL", "AMZN", "META", "AVGO", "TSLA", "BRK-B", "GOOG"]
+    training_start = "2020-01-01"
+    training_end = "2022-01-01"
 
-    test_start = "2020-01-01"
-    test_end = "2023-01-01"
+    SD = []
+    AVG = []
 
-    getData(tickers,train_start,train_end, folder="trainData")
-    getData(tickers, test_start, test_end, folder="testData")
+    for ticker in ticker:
+        s = stock(ticker, training_start, training_end, marcovTrade)
+        SD.append(s.volPerformance)
+        AVG.append(s.avgPerformance)
 
-    #ALL FOLLOWING DICTIONAIRES
-
-    train_changes , train_prices = readData(tickers, folder="trainData")
-    test_changes , test_prices = readData(tickers, folder="testData")
-
-    dictMatrices = mak_tr_matrix(train_changes)
-
-    #Setup plot
-    plt.figure(figsize=(10, 6))
-
-    for ticker, prices in test_prices.items():
-
-        results = backtest(ticker, prices,dictMatrices[ticker], marcovTrade,0.005,0,False)
-
-        plt.plot(results, label=ticker)
-
-    #Plotting
-    plt.legend()
-    plt.title("Results Strategy)")
-    plt.xlabel("Days")
-    plt.ylabel("Return")
-    plt.show()
-
+    print(SD)
+    print(AVG)
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-def backtest (ticker, prices,matrix, marcovTrade, fee, cash, allow_shorting):
+def backtest (ticker, prices,matrix, strategy_fn, fee, cash, allow_shorting):
 
     #NOTICE prices is np.array, not array, dict or pd-dataframe
 
@@ -11,7 +11,7 @@ def backtest (ticker, prices,matrix, marcovTrade, fee, cash, allow_shorting):
 
         # ----- Determination of trade ------
 
-        target_pos = marcovTrade(ticker, position, prices, day, cash, matrix)
+        target_pos = strategy_fn(ticker, position, prices, day, cash, matrix)
 
         #Opertunity to cancel unwanted shorting positions
         if not allow_shorting: target_pos = max(target_pos,0)
@@ -44,5 +44,4 @@ def backtest (ticker, prices,matrix, marcovTrade, fee, cash, allow_shorting):
             position += trade_amount
 
         cash_balance_log.append(cash + current_price * position)
-
     return cash_balance_log
