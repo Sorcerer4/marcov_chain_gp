@@ -1,6 +1,5 @@
-#github test 2
+from matplotlib.widgets import RadioButtons, CheckButtons
 
-#github test
 import yfinance as yf
 import os
 import pandas as pd
@@ -105,6 +104,9 @@ def marcovTrade(ticker, position, historical_prices, day, cash, matrix):
 
     return target_position
 
+
+
+
 def main():
     #S&P500 TOP 10
 
@@ -126,20 +128,20 @@ def main():
     dictMatrices = mak_tr_matrix(train_changes)
 
     #Setup plot
-    plt.figure(figsize=(10, 6))
+
+    from Visual_Plot import plot_interactive_with_normalize, plot_all
+
+    results_dict = {}
 
     for ticker, prices in test_prices.items():
+        equity_curve = backtest(ticker, prices, dictMatrices[ticker], marcovTrade, 0.005, 0, False)
+        results_dict[ticker] = equity_curve
 
-        results = backtest(ticker, prices,dictMatrices[ticker], marcovTrade,0.005,0,False)
+    # --- Interaktiv plott för en ticker med normalize toggle ---
+    plot_interactive_with_normalize(results_dict, default_normalize=True)
 
-        plt.plot(results, label=ticker)
-
-    #Plotting
-    plt.legend()
-    plt.title("Results Strategy)")
-    plt.xlabel("Days")
-    plt.ylabel("Return")
-    plt.show()
+    # --- Plottar alla tickers på samma graf (normaliserade) ---
+    plot_all(results_dict, normalize=True)
 
 
 if __name__ == "__main__":
