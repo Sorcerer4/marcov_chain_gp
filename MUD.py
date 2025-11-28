@@ -2,8 +2,6 @@ import yfinance as yf
 import os
 import pandas as pd
 import numpy as np
-import random
-from numpy.linalg import matrix_power
 import matplotlib.pyplot as plt
 
 lookupUD = {
