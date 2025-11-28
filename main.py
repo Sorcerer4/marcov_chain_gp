@@ -41,13 +41,14 @@ def readData(tickers,folder):
 
 def mak_tr_matrix(dailyChanges):
 
+    dictMatrices = dict()
     m,n = 2,2
 
-    for name,changes in dailyChanges.items():
+    for ticker,changes in dailyChanges.items():
         M = np.zeros((m,n))
         count_bull = count_bear = 0
 
-        print(name)
+        print(ticker)
 
         for i in range(len(changes)-1):
             if changes[i] < 0 and changes[i+1] < 0:
@@ -67,14 +68,39 @@ def mak_tr_matrix(dailyChanges):
         M[0,0], M[1,0] = M[0,0]/count_bear, M[1,0]/count_bear
         M[0, 1], M[1, 1] = M[0, 1] / count_bull, M[1, 1] / count_bull
 
+        dictMatrices[ticker] = M
+
         for i in range(12):
             print((matrix_power(M,i)))
 
-def marcovTrade(position, historical_prices, day, cash):
+    return dictMatrices
+
+def marcovTrade(ticker, position, historical_prices, day, cash, matrix):
     #--------RANDOMTRADE STRATEGY PLACEHOLDER--------
 
-    randomNumb = random.randint(-5,5)
-    target_position = position + randomNumb
+    ##randomNumb = random.randint(-5,5)
+
+    target_position = 0
+
+    changeToday = (historical_prices[day]-historical_prices[day-1])/historical_prices[day-1]
+
+    vector = [[0],[0]]
+
+    if changeToday < 0:
+        vector[0].append(0)
+        vector[1].append(1)
+    else:
+        vector[0].append(1)
+        vector[1].append(0)
+
+    probVector = np.matmul(matrix, vector)
+
+    if probVector[0][0] > 0.5:
+        target_position = position - 10
+    else:
+        target_position = position + 10
+
+
 
     return target_position
 
@@ -82,23 +108,27 @@ def marcovTrade(position, historical_prices, day, cash):
 def main():
     #S&P500 TOP 10
 
-    tickers = ["NVDA","MSFT","AAPL","GOOGL","AMZN","META","AVGO","TSLA","BRK-B","GOOG"]
+    tickers = ["NVDA","GOOG"]
     start = "2014-01-01"
     end = "2019-01-01"
 
     getData(tickers,start,end, folder="testData")
     changes_dict , prices_dict = readData(tickers, folder="testData")
 
-    #Setup plott
+    dictMatrices = mak_tr_matrix(changes_dict)
+
+    #Setup plot
     plt.figure(figsize=(10, 6))
 
-    for stock, prices in prices_dict.items():
+    for ticker, prices in prices_dict.items():
         #mak_tr_matrix(daily_changes)
-        results = backtest(prices,marcovTrade,0.005,10000,False)
+        print(ticker, prices)
+
+        results = backtest(ticker, prices,marcovTrade,0.005,10000,False, dictMatrices[ticker])
 
 
 
-        plt.plot(results, label=stock)
+        plt.plot(results, label=ticker)
 
     #Plotting
     plt.legend()
