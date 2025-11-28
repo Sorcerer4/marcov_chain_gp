@@ -71,12 +71,12 @@ def mak_tr_matrix(dailyChanges):
         
         #convert count of instances in matrix to probabilities
         for i in range (0,8):
-            jsum=0
+            jSum=0
             for j in range(0,8):
-                jsum += MUD[j, i]
+                jSum += MUD[j, i]
 
             for j in range(0,8):
-                MUD[j, i] /= jsum 
+                MUD[j, i] /= jSum 
         return MUD
 
 def signalMUD(MUD, changes):
@@ -124,43 +124,43 @@ def signalMUD(MUD, changes):
 def backtest(signals, changes):
     #initial capital, for allignment
     cash = 10000
-    dailyequity = [10000, 10000, 10000, 10000]
+    dailyEquity = [10000, 10000, 10000, 10000]
 
     for i in range(0, len(changes)-5):
         x = i + 1
         #buy
         if signals[i] == 1:
             cash *= (1+changes[x])
-            dailyequity.append(cash-0.5)
+            dailyEquity.append(cash-0.5)
 
         #short
         elif signals[i] == -1:
             #and unsuccesful
             if(1-(changes[x])) < 1:
                 cash *= (1-(changes[x]))
-                dailyequity.append(cash)
+                dailyEquity.append(cash)
             #and succesful
             else:
                 cash *= (1-(changes[x])*0.95)
-                dailyequity.append(cash)
+                dailyEquity.append(cash)
         #no trade today
         else:
-            dailyequity.append(cash)
+            dailyEquity.append(cash)
 
-    return dailyequity
+    return dailyEquity
 
 def main():
     tickers = ["PG"]
     start = "2020-01-01"
     end = "2024-01-01"
 
-    teststart = "2024-01-02"
-    testend = "2025-10-02"
+    testStart = "2024-01-02"
+    testEnd = "2025-10-02"
 
     getData(tickers,start,end, folder="trainData")
     changes_dict , prices_dict = readData(tickers, folder="trainData")
 
-    getData(tickers, teststart, testend, folder="testData")
+    getData(tickers, testStart, testEnd, folder="testData")
     changes_dicttest, real = readData(tickers, folder="testData")
 
 
@@ -173,13 +173,13 @@ def main():
     
     results = backtest(signals, changes_dicttest[tickers[0]])
     
-    realspy = []
+    buyHold = []
 
     for price in real[tickers[0]]:
-        realspy.append(price*(10000/float(real[tickers[0]][0])))
+        buyHold.append(price*(10000/float(real[tickers[0]][0])))
 
 
-    plt.plot(realspy, label='Buy & Hold')
+    plt.plot(buyHold, label='Buy & Hold')
 
     plt.plot(results, label="Moneymaker")
 
