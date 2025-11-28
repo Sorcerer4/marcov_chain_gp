@@ -47,11 +47,12 @@ def readData(tickers,folder):
     return changes, prices
 
 def mak_tr_matrix(dailyChanges):
- 
+    #build an 8x8 matrix based on U/D sequences
     for ticker,changes in dailyChanges.items():
 
         changeUD = []
         for change in changes:
+            #convert daily numerical change into U (upp/bulish) or D (down/bearish)
             if change < 0:
                 changeUD.append('D')
             else:
@@ -59,7 +60,7 @@ def mak_tr_matrix(dailyChanges):
         
         MUD = np.zeros((8,8))
 
-
+        #fill matrix with each instance of a 3 U/D combination followed by a 3 U/D combination
         for i in range(4, len(changeUD)-4):
         
             back = ''.join(changeUD[i-4:i-1])
@@ -68,7 +69,7 @@ def mak_tr_matrix(dailyChanges):
             MUD[lookupUD[forward],lookupUD[back]] += 1
             MUD[2,1] = 1
         
-
+        #convert count of instances in matrix to probabilities
         for i in range (0,8):
             jsum=0
             for j in range(0,8):
@@ -79,6 +80,7 @@ def mak_tr_matrix(dailyChanges):
         return MUD
 
 def signalMUD(MUD, changes):
+    #convert numeric changes to U/D
     changeUD = []
     signals = [0, 0, 0, 0]
     for change in changes:
@@ -87,6 +89,7 @@ def signalMUD(MUD, changes):
         else:
             changeUD.append('U')
     
+    #generate signals
     for i in range(4, len(changeUD)-4):
         
         back = ''.join(changeUD[i-4:i-1])
@@ -99,7 +102,7 @@ def signalMUD(MUD, changes):
 
         up = 0
         down = 0
-
+        #sum probabilities of U or D tomorrow 
         for j in range (0,4):
             up += output[j,0]
 
@@ -112,28 +115,35 @@ def signalMUD(MUD, changes):
         else:
             signals.append(0)
 
+    #for allignment
     signals.append(0)
     signals.append(0)
     signals.append(0)
     return signals
 
 def backtest(signals, changes):
+    #initial capital, for allignment
     cash = 10000
     dailyequity = [10000, 10000, 10000, 10000]
 
     for i in range(0, len(changes)-5):
         x = i + 1
+        #buy
         if signals[i] == 1:
             cash *= (1+changes[x])
             dailyequity.append(cash-0.5)
 
+        #short
         elif signals[i] == -1:
+            #and unsuccesful
             if(1-(changes[x])) < 1:
                 cash *= (1-(changes[x]))
                 dailyequity.append(cash)
+            #and succesful
             else:
                 cash *= (1-(changes[x])*0.95)
                 dailyequity.append(cash)
+        #no trade today
         else:
             dailyequity.append(cash)
 
@@ -145,7 +155,7 @@ def main():
     end = "2024-01-01"
 
     teststart = "2024-01-02"
-    testend = "2025-10-01"
+    testend = "2025-10-02"
 
     getData(tickers,start,end, folder="trainData")
     changes_dict , prices_dict = readData(tickers, folder="trainData")
