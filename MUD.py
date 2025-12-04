@@ -3,8 +3,9 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
-lookupUD = {
+LOOKUP_UD = {
             'UUU': 0,
             'UUD': 1,
             'UDU': 2,
@@ -18,8 +19,8 @@ lookupUD = {
 def getData(ticker,start,end, folder):
     os.makedirs(folder, exist_ok=True)
 
-    df = yf.download(ticker, start=start, end=end, auto_adjust=False)[["Open", "Close"]]
-    df["DailyChange"] = (df["Close"] - df["Open"]) / df["Open"]
+    df = yf.download(ticker, start=start, end=end, auto_adjust=True)[["Open", "Close"]]
+    df["DailyChange"] = df["Close"].pct_change() # - df["Open"]) / df["Open"]
     df.to_csv(f"{folder}/{ticker}.csv")
 
 def readData(ticker,folder):
@@ -62,10 +63,9 @@ def makeTrMatrix(dailyChanges):
         for i in range(4, len(changeUD)-4):
         
             back = ''.join(changeUD[i-4:i-1])
-            forward = ''.join(changeUD[i+1:i+4])
+            forward = ''.join(changeUD[i:i+3])
     
-            MUD[lookupUD[forward],lookupUD[back]] += 1
-            MUD[2,1] = 1
+            MUD[LOOKUP_UD[forward],LOOKUP_UD[back]] += 1
         
         #convert count of instances in matrix to probabilities
         for i in range (0,8):
@@ -94,7 +94,7 @@ def signalMUD(MUD, changes):
 
 
         INPUT = np.zeros((8, 1))
-        INPUT[lookupUD[back], 0] = 1
+        INPUT[LOOKUP_UD[back], 0] = 1
 
         output = (np.matmul(MUD, INPUT))
 
@@ -133,6 +133,7 @@ def backtest(signals, changes):
 
     return dailyEquity
 
+
 def plotResults(results, buyHold, ticker):
 
     plt.figure(figsize=(10, 6))
@@ -147,14 +148,93 @@ def plotResults(results, buyHold, ticker):
     plt.ylabel("Equity")
     plt.show()
 
+def plotResultsLive(results, buyHold, ticker):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.set_title(ticker); ax.set_xlabel("Days"); ax.set_ylabel("Equity")
+    ax.set_xlim(0, len(results)); ax.set_ylim(min(results+buyHold), max(results+buyHold))
+
+    bh, = ax.plot([], [], label="Buy & Hold")
+    mm, = ax.plot([], [], label="Moneymaker")
+    ax.legend()
+
+    def update(i):
+        bh.set_data(range(i), buyHold[:i])
+        mm.set_data(range(i), results[:i])
+        return bh, mm
+
+    ani = FuncAnimation(fig, update, frames=len(results), interval=10, blit=True)
+    plt.show()
+    return ani  # keep a reference alive
+
+def plotMUD(MUD):
+    plt.figure(figsize=(8, 6))
+    plt.imshow(MUD, cmap="Blues", interpolation="nearest")
+    plt.colorbar(label="Transition Probability")
+
+    plt.xticks(ticks=range(8), labels=list(LOOKUP_UD.keys()), rotation=45)
+    plt.yticks(ticks=range(8), labels=list(LOOKUP_UD.keys()))
+
+    for i in range(8):
+        for j in range(8):
+            value = MUD[i, j]
+            plt.text(
+                j, i,
+                f"{value:.3f}",
+                ha="center",
+                va="center",
+                color="white" if value > MUD.max()/2 else "black"
+            )
+
+    plt.title("Transition Matrix Heatmap (MUD)")
+    plt.xlabel("Back State")
+    plt.ylabel("Forward State")
+    plt.tight_layout()
+    plt.show()
+
+def plotPUD(MUD):
+    
+    PUD = np.zeros((2,8))
+    output = 0
+
+    for i in range(8):
+        for j in range (0,4): #up
+                PUD[0,i] += MUD[j,i]
+        for j in range (4,8): #down
+                PUD[1,i] += MUD[j,i]
+    
+    
+    plt.figure(figsize=(8, 6))
+    plt.imshow(PUD, cmap="Blues", interpolation="nearest")
+    plt.colorbar(label="Transition Probability")
+
+    plt.xticks(ticks=range(8), labels=list(LOOKUP_UD.keys()), rotation=45)
+    plt.yticks(ticks=range(2), labels=list(["U", "D"]))
+
+    for i in range(2):
+        for j in range(8):
+            value = PUD[i, j]
+            plt.text(
+                j, i,
+                f"{value:.3f}",
+                ha="center",
+                va="center",
+                color="white" if value > PUD.max()/1.5 else "black"
+
+            )
+
+    plt.title("Probability up or down")
+    plt.xlabel("Back State")
+    plt.ylabel("Forward State")
+    plt.tight_layout()
+    plt.show()
 
 def main():
-    ticker = "QQQ"
-    start = "2020-01-01"
-    end = "2024-01-01"
+    ticker = "TSLA"
+    start = "2020-12-01"
+    end = "2024-06-01"
 
-    testStart = "2024-09-08"
-    testEnd = "2025-09-08"
+    testStart = "2025-01-10"
+    testEnd = "2025-11-08"
 
     getData(ticker,start,end, folder="trainData")
     changes_dict , prices_dict = readData(ticker, folder="trainData")
@@ -175,7 +255,8 @@ def main():
         buyHoldNorm.append(price*(10000/(buyHold[ticker][0])))
 
     plotResults(results, buyHoldNorm, ticker)
-
+    #plotMUD(MUD)
+    #plotPUD(MUD)
 
 if __name__ == "__main__":
     main()
