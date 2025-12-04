@@ -174,7 +174,6 @@ def main():
     for price in buyHold[ticker][:-3]:
         buyHoldNorm.append(price*(10000/(buyHold[ticker][0])))
 
-    print(results)   
     plotResults(results, buyHoldNorm, ticker)
 
 
