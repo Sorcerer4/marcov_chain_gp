@@ -1,3 +1,7 @@
+#Projekt: Markovkedjor
+#Gruppnummer: 9
+#Medlemmar: Luke Bohlin, Aston Ehrling, Victor Jia Gao, Bruno Harju-Jeanty, Arvid Hult
+
 import yfinance as yf
 import os
 import pandas as pd
