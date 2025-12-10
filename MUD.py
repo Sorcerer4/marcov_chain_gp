@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import matplotlib.animation as animation
 
 LOOKUP_UD = {
             'UUU': 0,
@@ -19,8 +20,12 @@ LOOKUP_UD = {
 def getData(ticker,start,end, folder):
     os.makedirs(folder, exist_ok=True)
 
-    df = yf.download(ticker, start=start, end=end, auto_adjust=True)[["Open", "Close"]]
-    df["DailyChange"] = df["Close"].pct_change() # - df["Open"]) / df["Open"]
+    df = yf.download(ticker, 
+                     start=start, 
+                     end=end, 
+                     auto_adjust=True)[["Open", "Close"]]
+    
+    df["DailyChange"] = df["Close"].pct_change()
     df.to_csv(f"{folder}/{ticker}.csv")
 
 def readData(ticker,folder):
@@ -46,28 +51,29 @@ def readData(ticker,folder):
     return changes, prices
 
 def makeTrMatrix(dailyChanges):
-    #build an 8x8 matrix based on U/D sequences
     for ticker,changes in dailyChanges.items():
 
         changeUD = []
         for change in changes:
-            #convert daily numerical change into U (upp/bulish) or D (down/bearish)
             if change < 0:
                 changeUD.append('D')
             else:
                 changeUD.append('U')
         
+
         MUD = np.zeros((8,8))
 
         #fill matrix with each instance of a 3 U/D combination followed by a 3 U/D combination
+        
         for i in range(4, len(changeUD)-4):
         
-            back = ''.join(changeUD[i-4:i-1])
-            forward = ''.join(changeUD[i:i+3])
+            back = ''.join(changeUD[i-3:i])
+            forward = ''.join(changeUD[i+1:i+4])
     
             MUD[LOOKUP_UD[forward],LOOKUP_UD[back]] += 1
         
         #convert count of instances in matrix to probabilities
+        
         for i in range (0,8):
             jSum=0
             for j in range(0,8):
@@ -77,7 +83,7 @@ def makeTrMatrix(dailyChanges):
                 MUD[j, i] /= jSum 
         return MUD
 
-def signalMUD(MUD, changes):
+def signalGenerator(MUD, changes):
     #convert numeric changes to U/D
     changeUD = []
     signals = []
@@ -150,11 +156,11 @@ def plotResults(results, buyHold, ticker):
 
 def plotResultsLive(results, buyHold, ticker):
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.set_title(ticker); ax.set_xlabel("Days"); ax.set_ylabel("Equity")
+    ax.set_title(f"Current stock: {ticker}"); ax.set_xlabel("Days"); ax.set_ylabel("Equity")
     ax.set_xlim(0, len(results)); ax.set_ylim(min(results+buyHold), max(results+buyHold))
 
     bh, = ax.plot([], [], label="Buy & Hold")
-    mm, = ax.plot([], [], label="Moneymaker")
+    mm, = ax.plot([], [], label="Algorithmic Trading Strategy")
     ax.legend()
 
     def update(i):
@@ -162,7 +168,8 @@ def plotResultsLive(results, buyHold, ticker):
         mm.set_data(range(i), results[:i])
         return bh, mm
 
-    ani = FuncAnimation(fig, update, frames=len(results), interval=10, blit=True)
+    ani = FuncAnimation(fig, update, frames=len(results), interval=30, blit=True)
+    
     plt.show()
     return ani  # keep a reference alive
 
@@ -229,12 +236,12 @@ def plotPUD(MUD):
     plt.show()
 
 def main():
-    ticker = "TSLA"
-    start = "2020-12-01"
-    end = "2024-06-01"
+    ticker = "SPY"
+    start = "2019-12-30"
+    end = "2024-12-30"
 
-    testStart = "2025-01-10"
-    testEnd = "2025-11-08"
+    testStart = "2025-01-01"
+    testEnd = "2025-12-08"
 
     getData(ticker,start,end, folder="trainData")
     changes_dict , prices_dict = readData(ticker, folder="trainData")
@@ -245,7 +252,7 @@ def main():
 
     MUD = makeTrMatrix(changes_dict)
 
-    signals = signalMUD(MUD, changes_dicttest[ticker])
+    signals = signalGenerator(MUD, changes_dicttest[ticker])
     
     results = backtest(signals, changes_dicttest[ticker])
 
@@ -254,11 +261,10 @@ def main():
     for price in buyHold[ticker][:-3]:
         buyHoldNorm.append(price*(10000/(buyHold[ticker][0])))
 
-    plotResults(results, buyHoldNorm, ticker)
-    #plotMUD(MUD)
-    #plotPUD(MUD)
+    plotResultsLive(results, buyHoldNorm, ticker)
+    
+    plotMUD(MUD)
+    plotPUD(MUD)
 
 if __name__ == "__main__":
     main()
-
-
